@@ -2,6 +2,9 @@
 
 A Model Context Protocol (MCP) server for WooCommerce integration, compatible with Windows, macOS, and Linux.
 
+FORK NOTE: I just wrapped it in the MCP SDK, and added a container for easier deployment.
+The docker still doesn't work great, but you might find it handy to avoid installing node.
+
 ## Overview
 
 This MCP server enables interaction with WooCommerce stores through the WordPress REST API. It provides comprehensive tools for managing all aspects of products, orders, customers, shipping, taxes, discounts, and store configuration using JSON-RPC 2.0 protocol.

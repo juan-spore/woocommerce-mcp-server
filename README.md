@@ -10,15 +10,20 @@ This MCP server enables interaction with WooCommerce stores through the WordPres
 
 1. Clone the repository
 2. Install dependencies:
+
 ```bash
 npm install
 ```
+
 3. Build the project:
+
 ```bash
 npm run build
 ```
 
 ## Configuration
+
+### Native Installation
 
 Add the server to your MCP settings file with environment variables for credentials:
 
@@ -40,14 +45,121 @@ Add the server to your MCP settings file with environment variables for credenti
 }
 ```
 
+### Claude Code CLI Installation
+
+You can easily add this MCP server to Claude Code using the `claude mcp add` command:
+
+```bash
+claude mcp add woocommerce 
+```
+
+This will automatically configure the MCP server with the required environment variables. You'll be prompted to provide:
+
+- WordPress Site URL
+- WooCommerce Consumer Key
+- WooCommerce Consumer Secret
+- WordPress Username (optional, for WordPress API methods)
+- WordPress Password (optional, for WordPress API methods)
+
+### Docker Installation
+
+For containerized deployment, first build and start the container:
+
+```bash
+# Set your environment variables
+export WORDPRESS_SITE_URL="https://your-wordpress-site.com"
+export WOOCOMMERCE_CONSUMER_KEY="your-woocommerce-consumer-key"
+export WOOCOMMERCE_CONSUMER_SECRET="your-woocommerce-consumer-secret"
+export WORDPRESS_USERNAME="your-wordpress-username"
+export WORDPRESS_PASSWORD="your-wordpress-password"
+
+# Build and start the container
+make up
+```
+
+Then configure your MCP settings to use docker exec:
+
+```json
+{
+  "mcpServers": {
+    "woocommerce": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "woocommerce-mcp-server",
+        "npm",
+        "start"
+      ]
+    }
+  }
+}
+```
+
+#### Alternative Docker Configuration
+
+If you prefer to use docker run directly (one-time execution):
+
+```json
+{
+  "mcpServers": {
+    "woocommerce": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e", "WORDPRESS_SITE_URL=https://your-wordpress-site.com",
+        "-e", "WOOCOMMERCE_CONSUMER_KEY=your-woocommerce-consumer-key",
+        "-e", "WOOCOMMERCE_CONSUMER_SECRET=your-woocommerce-consumer-secret",
+        "-e", "WORDPRESS_USERNAME=your-wordpress-username",
+        "-e", "WORDPRESS_PASSWORD=your-wordpress-password",
+        "woocommerce-mcp",
+        "npm",
+        "start"
+      ]
+    }
+  }
+}
+```
+
+### Docker Management Commands
+
+The project includes a self-documenting Makefile for easy container management:
+
+```bash
+# Show all available commands
+make help
+
+# Build and start container
+make up
+
+# Run MCP server interactively
+make run-mcp
+
+# Get shell access to container
+make shell
+
+# View logs
+make logs
+
+# Stop container
+make down
+
+# Check environment variables
+make env-check
+```
+
 ### Environment Variables
 
-#### Required for WooCommerce API access:
+#### Required for WooCommerce API access
+
 - `WORDPRESS_SITE_URL`: Your WordPress site URL (WooCommerce is a WordPress plugin)
 - `WOOCOMMERCE_CONSUMER_KEY`: WooCommerce REST API consumer key
 - `WOOCOMMERCE_CONSUMER_SECRET`: WooCommerce REST API consumer secret
 
-#### Required only for WordPress API methods:
+#### Required only for WordPress API methods
+
 - `WORDPRESS_USERNAME`: WordPress username with appropriate permissions
 - `WORDPRESS_PASSWORD`: WordPress password for authentication
 
@@ -56,10 +168,13 @@ You can also provide these credentials in the request parameters if you prefer n
 ## Authentication Options
 
 ### WooCommerce Authentication
+
 WooCommerce API access requires consumer keys that you can generate in your WordPress dashboard under WooCommerce → Settings → Advanced → REST API.
 
 ### WordPress Authentication
+
 For WordPress-specific methods (like managing posts), you need to provide:
+
 - Username/password credentials for basic authentication
 - The WordPress REST API must be enabled on your site
 

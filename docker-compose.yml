@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  woocommerce-mcp:
+    build: .
+    container_name: woocommerce-mcp-server
+    # No restart policy - this is for interactive use
+    restart: "no"
+    environment:
+      - NODE_ENV=production
+      # WordPress/WooCommerce connection settings
+      - WORDPRESS_SITE_URL=${WORDPRESS_SITE_URL:-}
+      - WORDPRESS_USERNAME=${WORDPRESS_USERNAME:-}
+      - WORDPRESS_PASSWORD=${WORDPRESS_PASSWORD:-}
+      - WOOCOMMERCE_CONSUMER_KEY=${WOOCOMMERCE_CONSUMER_KEY:-}
+      - WOOCOMMERCE_CONSUMER_SECRET=${WOOCOMMERCE_CONSUMER_SECRET:-}
+    volumes:
+      # Mount local directory for development
+      - ./src:/app/src:ro
+    # Keep container running for interactive use
+    tty: true
+    stdin_open: true
+    # Override default command to keep container alive
+    command: tail -f /dev/null

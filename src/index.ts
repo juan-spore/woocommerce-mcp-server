@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import axios from "axios";
-import { createInterface } from "readline";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { WooMetaData } from "./types";
 
 interface JsonRpcRequest {
@@ -1810,63 +1815,101 @@ async function handleWooCommerceRequest(
   }
 }
 
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false,
-});
-
-rl.on("line", async (line) => {
-  let request: JsonRpcRequest;
-  try {
-    request = JSON.parse(line);
-    if (request.jsonrpc !== "2.0") {
-      throw new Error("Invalid JSON-RPC version");
-    }
-  } catch (error) {
-    console.log(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: null,
-        error: {
-          code: -32700,
-          message: "Parse error",
-          data: error instanceof Error ? error.message : String(error),
-        },
-      })
-    );
-    return;
+// Create MCP server
+const server = new Server(
+  {
+    name: "woocommerce-mcp-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
   }
+);
 
-  try {
-    const result = await handleWooCommerceRequest(
-      request.method,
-      request.params
-    );
-    console.log(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: request.id,
-        result,
-      })
-    );
-  } catch (error) {
-    console.log(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: request.id,
-        error: {
-          code: -32000,
-          message: error instanceof Error ? error.message : String(error),
+// List available tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  const wpMethods = [
+    "create_post",
+    "get_posts", 
+    "update_post",
+    "get_post_meta",
+    "update_post_meta",
+    "create_post_meta",
+    "delete_post_meta",
+  ];
+
+  const wooMethods = [
+    "get_products",
+    "get_product",
+    "create_product",
+    "update_product",
+    "delete_product",
+    "get_orders",
+    "get_order",
+    "create_order",
+    "update_order",
+    "delete_order",
+    "get_customers",
+    "get_customer",
+    "create_customer",
+    "update_customer",
+    "delete_customer",
+  ];
+
+  const allMethods = [...wpMethods, ...wooMethods];
+  
+  return {
+    tools: allMethods.map(method => ({
+      name: method,
+      description: `WooCommerce API method: ${method}`,
+      inputSchema: {
+        type: "object",
+        properties: {
+          siteUrl: { type: "string", description: "WordPress site URL" },
+          username: { type: "string", description: "WordPress username" },
+          password: { type: "string", description: "WordPress password" },
+          consumerKey: { type: "string", description: "WooCommerce consumer key" },
+          consumerSecret: { type: "string", description: "WooCommerce consumer secret" },
         },
-      })
-    );
+      },
+    })),
+  };
+});
+
+// Handle tool calls
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  try {
+    const result = await handleWooCommerceRequest(name, args || {});
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text", 
+          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
   }
 });
 
-process.on("SIGINT", () => {
-  rl.close();
-  process.exit(0);
-});
+// Start the server
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("WooCommerce MCP server running on stdin/stdout");
+}
 
-console.error("WooCommerce MCP server running on stdin/stdout");
+main().catch(console.error);
